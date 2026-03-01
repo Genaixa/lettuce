@@ -11,7 +11,7 @@ export const metadata = {
 const faqs = [
   {
     q: "What makes your lettuce kosher for Pesach?",
-    a: "Every head is individually inspected by our certified checker. We check for insects (borer infestation) as required by halacha, and all produce is handled in accordance with Pesach standards. Our lettuce comes with appropriate kosher certification.",
+    a: "Every head is individually inspected by certified checkers. They check for insects as required by halacha, and all produce is handled in accordance with Pesach standards. All lettuce comes with appropriate kosher certification.",
   },
   {
     q: "How does the pre-order system work?",
