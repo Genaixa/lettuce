@@ -23,7 +23,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             src={product.image_url}
             alt={product.name}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            className="object-contain"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
         ) : (
@@ -55,7 +55,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               {product.meta}
             </p>
           )}
-          <p className="text-[#1c3320]/75 text-sm leading-relaxed">
+          <p className="text-[#1c3320]/75 text-sm leading-relaxed whitespace-pre-line">
             {product.description}
           </p>
         </div>
