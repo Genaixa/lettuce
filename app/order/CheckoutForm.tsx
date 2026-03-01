@@ -524,7 +524,7 @@ export default function CheckoutForm({ onSuccess }: CheckoutFormProps) {
             className="mt-0.5 accent-[#2d6e3e]"
           />
           <span className="text-sm text-[#1c3320]/75 leading-relaxed">
-            I&apos;d like to receive future Dansky updates
+            I&apos;d like to receive future Dansky&apos;s updates
           </span>
         </label>
       </div>
