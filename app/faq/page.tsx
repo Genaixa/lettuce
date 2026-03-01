@@ -39,7 +39,7 @@ const faqs = [
   },
   {
     q: "Can I order without pre-ordering?",
-    a: "To guarantee your stock, a pre-order must be placed. Walk-in stock may be available in store, but this cannot be relied upon.",
+    a: "To guarantee your order, a pre-order must be placed. Walk-in stock may be available in store, but this cannot be relied upon.",
   },
 ];
 
