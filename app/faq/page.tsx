@@ -19,7 +19,7 @@ const faqs = [
   },
   {
     q: "What does 'pre-authorised' mean for my payment?",
-    a: "A pre-authorisation is a temporary hold on your card. It reserves the funds but does not debit your account. You will only see the actual charge (and the hold released into a charge) when we confirm your order is ready.",
+    a: "A pre-authorisation is a temporary hold on your card. It reserves the funds but does not debit your account. You will only see the actual charge when we confirm your order is ready.",
   },
   {
     q: "Which areas do you deliver to?",
