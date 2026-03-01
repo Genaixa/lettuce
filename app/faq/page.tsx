@@ -95,15 +95,11 @@ export default function FAQPage() {
               >
                 Still have questions?
               </h2>
-              <p className="text-[#1c3320]/75 text-sm mb-6">
-                We&apos;re happy to help. Get in touch and we&apos;ll respond as soon as
-                possible.
-              </p>
               <a
-                href="mailto:orders@danskys.co.uk"
+                href="tel:01912600947"
                 className="inline-flex px-6 py-3 bg-[#2d6e3e] hover:bg-[#245730] text-white font-semibold rounded-xl transition-colors text-sm"
               >
-                Email Us
+                Call us on 0191 260 0947
               </a>
             </div>
           </div>
