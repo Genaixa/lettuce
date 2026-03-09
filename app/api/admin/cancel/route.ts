@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     const { data: order, error: fetchError } = await supabase
       .from("orders")
-      .select("*")
+      .select("*, order_items(product_id, quantity)")
       .eq("id", orderId)
       .single();
 
@@ -74,6 +74,21 @@ export async function POST(request: NextRequest) {
         { error: "Failed to update order status" },
         { status: 500 }
       );
+    }
+
+    // ── Restore stock for each item ─────────────────────────────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const orderItems: { product_id: string; quantity: number }[] = (order as any).order_items ?? [];
+    for (const item of orderItems) {
+      try {
+        await supabase.rpc("increment_stock", {
+          p_product_id: item.product_id,
+          p_qty: item.quantity,
+        });
+      } catch (stockErr) {
+        // Non-fatal — log and continue
+        console.error("Failed to restore stock for product", item.product_id, stockErr);
+      }
     }
 
     return NextResponse.json({ success: true });

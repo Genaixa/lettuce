@@ -3,8 +3,13 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 
 function escapeCSV(value: string | null | undefined): string {
   if (value == null) return "";
-  const str = String(value);
-  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+  let str = String(value);
+  // Prevent formula injection: prefix dangerous leading chars so spreadsheets
+  // don't interpret them as formulas (=, +, -, @, tab, carriage return)
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+  if (str.includes(",") || str.includes('"') || str.includes("\n") || str.startsWith("'")) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;

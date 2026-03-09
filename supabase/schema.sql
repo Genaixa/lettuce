@@ -17,9 +17,10 @@ CREATE TABLE IF NOT EXISTS products (
   image_url    TEXT,
   badge        TEXT,           -- e.g. "Bestseller", "New"
   meta         TEXT,           -- e.g. "Serves 4-6 people"
-  active       BOOLEAN NOT NULL DEFAULT TRUE,
-  sort_order   INTEGER NOT NULL DEFAULT 0,
-  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  active         BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order     INTEGER NOT NULL DEFAULT 0,
+  stock_quantity INTEGER DEFAULT NULL,   -- NULL = unlimited
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Seed default products
@@ -68,7 +69,7 @@ CREATE TABLE IF NOT EXISTS orders (
   status                order_status NOT NULL DEFAULT 'pending',
   delivery_method       delivery_method NOT NULL DEFAULT 'pickup',
   -- Blink payment
-  blink_transaction_id  TEXT,
+  blink_transaction_id  TEXT UNIQUE,   -- enforces one order per transaction
   blink_preauth_id      TEXT,
   payment_status        payment_status NOT NULL DEFAULT 'pending',
   -- Customer
@@ -132,6 +133,32 @@ CREATE INDEX IF NOT EXISTS orders_delivery_method_idx ON orders(delivery_method)
 CREATE INDEX IF NOT EXISTS orders_created_at_idx ON orders(created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_user_id_idx ON orders(user_id);
 CREATE INDEX IF NOT EXISTS order_items_order_id_idx ON order_items(order_id);
+
+-- ============================================================
+-- STOCK MANAGEMENT FUNCTIONS
+-- ============================================================
+
+-- decrement_stock: called when an order is placed
+CREATE OR REPLACE FUNCTION decrement_stock(p_product_id UUID, p_qty INTEGER)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE products
+  SET stock_quantity = GREATEST(0, stock_quantity - p_qty)
+  WHERE id = p_product_id
+    AND stock_quantity IS NOT NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- increment_stock: called when an order is cancelled
+CREATE OR REPLACE FUNCTION increment_stock(p_product_id UUID, p_qty INTEGER)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE products
+  SET stock_quantity = stock_quantity + p_qty
+  WHERE id = p_product_id
+    AND stock_quantity IS NOT NULL;
+END;
+$$ LANGUAGE plpgsql;
 
 -- ============================================================
 -- ROW LEVEL SECURITY (RLS)

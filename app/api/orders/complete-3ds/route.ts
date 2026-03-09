@@ -166,6 +166,23 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (orderError || !order) {
+      // Unique constraint violation on blink_transaction_id means this
+      // transaction was already processed (e.g. browser back/retry).
+      // Return the existing order rather than failing.
+      if (orderError?.code === "23505") {
+        const { data: existing } = await supabase
+          .from("orders")
+          .select("id")
+          .eq("blink_transaction_id", transactionId)
+          .single();
+        if (existing) {
+          console.log("[3DS] Duplicate transaction — returning existing order:", existing.id);
+          return NextResponse.json(
+            { orderId: existing.id, reference: existing.id.slice(0, 8).toUpperCase() },
+            { status: 200 }
+          );
+        }
+      }
       console.error("Order insert error (3DS complete):", orderError);
       return NextResponse.json(
         { errors: ["Failed to create order. Please contact us."] },
