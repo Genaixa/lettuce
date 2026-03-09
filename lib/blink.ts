@@ -28,6 +28,7 @@ export async function getAccessToken(): Promise<string> {
     body: JSON.stringify({
       api_key: API_KEY,
       secret_key: SECRET_KEY,
+      send_blink_receipt: true,
     }),
   });
 
