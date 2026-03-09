@@ -207,7 +207,52 @@ export async function processCard(
 }
 
 // ─────────────────────────────────────────────
-// 4. Capture Preauth
+// 4. Verify Transaction Status
+// ─────────────────────────────────────────────
+
+export interface TransactionStatusResult {
+  success: boolean;
+  status?: string;   // e.g. "authorised", "preauthorised", "declined", etc.
+  errorMessage?: string;
+}
+
+export async function getTransactionStatus(
+  transactionId: string
+): Promise<TransactionStatusResult> {
+  try {
+    const accessToken = await getAccessToken();
+    const res = await fetch(
+      `${BASE_URL}/api/pay/v1/transactions/${transactionId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    const data = await res.json().catch(() => ({}));
+    console.log("[Blink getTransactionStatus]", transactionId, "status:", res.status, "body:", JSON.stringify(data));
+
+    if (!res.ok) {
+      return { success: false, errorMessage: data?.message ?? `Status check failed (${res.status})` };
+    }
+
+    const status: string =
+      (data?.data?.status ?? data?.status ?? "").toLowerCase();
+
+    return { success: true, status };
+  } catch (error) {
+    return {
+      success: false,
+      errorMessage: error instanceof Error ? error.message : "Status check network error",
+    };
+  }
+}
+
+// ─────────────────────────────────────────────
+// 5. Capture Preauth
 // ─────────────────────────────────────────────
 
 export interface CaptureResult {

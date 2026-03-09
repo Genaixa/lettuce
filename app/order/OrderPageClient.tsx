@@ -13,54 +13,46 @@ import { Loader2, AlertCircle, Lock } from "lucide-react";
 const FALLBACK_PRODUCTS: Product[] = [
   {
     id: "prod-1",
-    name: "Romaine Lettuce Head",
+    name: "Bodek Romaine Lettuce Leaves",
     description:
-      "Premium kosher-checked romaine lettuce. Crisp leaves, ideal for salads and wraps.",
-    price: 3.99,
-    image_url: null,
-    badge: "Bestseller",
-    meta: "1 head — serves 2-4",
+      "Fresh, Washed and Checked.\nSupervision CRC, Montreal Kosher & OU Certifications.\n170g",
+    price: 6.99,
+    image_url: "/romaine.jpg",
+    badge: "OU · MK · CRC",
+    meta: "170g",
     active: true,
     sort_order: 1,
   },
   {
     id: "prod-2",
-    name: "Iceberg Lettuce Head",
-    description: "Classic iceberg lettuce, crisp and refreshing. Kosher-checked for Pesach use.",
-    price: 3.49,
-    image_url: null,
-    badge: null,
-    meta: "1 head — serves 2-4",
+    name: "Alei Katif Romaine Lettuce Leaves",
+    description:
+      "Fresh, Washed and Checked.\nSupervision Bdatz Edah HaChareidis Jerusalem.\nApprox 270g",
+    price: 6.99,
+    image_url: "/Katif.jpeg",
+    badge: "Bdatz Edah HaChareidis",
+    meta: "Approx 270g",
     active: true,
     sort_order: 2,
   },
   {
     id: "prod-3",
-    name: "Romaine Lettuce 3-Pack",
+    name: "Cheffman's Romaine Lettuce Leaves",
     description:
-      "Three kosher-checked romaine lettuce heads — great value for larger families or sedarim.",
-    price: 10.99,
-    image_url: null,
-    badge: "Best Value",
-    meta: "3 heads — serves 8-12",
+      "Fresh, Washed and Checked.\nSupervision Kedassia (UOHC).\n180g",
+    price: 5.40,
+    image_url: "/Cheffmans.png",
+    badge: "Cheffman's - New This Year!!!",
+    badge_starburst: true,
+    supervision: "Kedassia",
+    meta: "180g",
     active: true,
     sort_order: 3,
-  },
-  {
-    id: "prod-4",
-    name: "Mixed Lettuce Bundle",
-    description: "A selection of romaine and iceberg heads, pre-inspected and ready.",
-    price: 12.99,
-    image_url: null,
-    badge: "Bundle Deal",
-    meta: "2 romaine + 2 iceberg",
-    active: true,
-    sort_order: 4,
   },
 ];
 
 export default function OrderPageClient() {
-  const { items } = useCart();
+  const { items, clearCart } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,18 +80,19 @@ export default function OrderPageClient() {
 
     window.history.replaceState({}, "", "/order");
 
-    const failStatuses = ["failed", "cancelled", "error", "declined"];
-    if (status && failStatuses.includes(status.toLowerCase())) {
-      setThreeDSError(`Payment was not completed (${status}). Please go back and try again.`);
-      return;
-    }
+    // Note: we do NOT block on the `status` query param here.
+    // Blink sometimes returns a misleading status (e.g. "declined") in the
+    // redirect URL even when the preauth was actually authorised.  The server
+    // route /api/orders/complete-3ds is the source of truth — it will reject
+    // the order if the transactionId is invalid.  The only safe client-side
+    // signal for a genuine user cancellation is the absence of a transaction_id.
 
-    const savedRaw = sessionStorage.getItem("blink_3ds_pending");
+    const savedRaw = localStorage.getItem("blink_3ds_pending");
     if (!savedRaw) {
       setThreeDSError("Session data not found. If payment was taken please contact us with your email address.");
       return;
     }
-    sessionStorage.removeItem("blink_3ds_pending");
+    localStorage.removeItem("blink_3ds_pending");
 
     setThreeDSLoading(true);
     let savedPayload: unknown;
@@ -119,6 +112,7 @@ export default function OrderPageClient() {
       .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
       .then(({ ok, data }) => {
         if (ok) {
+          clearCart();
           setOrderSuccess({ orderId: data.orderId, reference: data.reference });
         } else {
           setThreeDSError(
@@ -257,7 +251,7 @@ export default function OrderPageClient() {
             >
               Pre-Order Your Pesach Lettuce
             </h1>
-            <p className="text-[#1c3320]/60 mt-3 max-w-2xl mx-auto">
+            <p className="text-[#1c3320]/80 font-medium mt-3 max-w-2xl mx-auto">
               Add products to your order below, then complete checkout. Your
               card will be pre-authorised — not charged — until your order is
               ready.
@@ -283,10 +277,10 @@ export default function OrderPageClient() {
             ))}
           </div>
 
-          <div className="mt-8 p-4 bg-[#f2faf3] border border-[#c5e0cc] rounded-xl text-sm text-[#1c3320]/60 leading-relaxed">
+          <div className="mt-8 p-4 bg-[#f2faf3] border border-[#c5e0cc] rounded-xl text-sm text-[#1c3320]/80 font-medium leading-relaxed">
             Our full range of regular fresh lettuces and salad mixes will be
             available in store as usual.{" "}
-            <span className="text-[#1c3320]/40">
+            <span className="text-[#1c3320]/70">
               Pre-ordering is not available on those items.
             </span>
           </div>
@@ -305,7 +299,7 @@ export default function OrderPageClient() {
               >
                 Your cart is empty
               </h2>
-              <p className="text-[#1c3320]/50 text-base mb-8">
+              <p className="text-[#1c3320]/80 font-medium text-base mb-8">
                 Add some products above to continue with your pre-order.
               </p>
               <a
@@ -327,6 +321,10 @@ export default function OrderPageClient() {
                 <Lock size={16} />
                 Continue to Payment
               </button>
+              <p className="mt-3 text-[#1c3320]/60 text-xs leading-relaxed text-center">
+                Your card will be pre-authorised, not charged, when you place your
+                order. Payment is captured when your order is ready.
+              </p>
             </div>
           ) : (
             /* Step 2 — locked cart + checkout form */

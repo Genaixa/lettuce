@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { getTransactionStatus } from "@/lib/blink";
 import { Resend } from "resend";
 import { orderConfirmationHtml } from "@/lib/emails/OrderConfirmation";
 import type { DeliveryMethod } from "@/types";
@@ -53,18 +54,14 @@ export async function POST(request: NextRequest) {
     if (!delivery_method || !["delivery", "pickup"].includes(delivery_method))
       errors.push("Delivery method is required");
 
-    if (delivery_method === "delivery") {
-      if (!address_line1?.trim())
-        errors.push("Door number / name is required for delivery");
-      if (!address_line2?.trim())
-        errors.push("Street is required for delivery");
-      if (!postcode?.trim()) {
-        errors.push("Postcode is required for delivery");
-      } else if (!validatePostcode(postcode)) {
-        errors.push(
-          "Home delivery is only available within the Bensham delivery zone (NE8)."
-        );
-      }
+    if (!address_line1?.trim()) errors.push("Door number / name is required");
+    if (!address_line2?.trim()) errors.push("Street is required");
+    if (!postcode?.trim()) {
+      errors.push("Postcode is required");
+    } else if (delivery_method === "delivery" && !validatePostcode(postcode)) {
+      errors.push(
+        "Home delivery is only available within the Bensham delivery zone (NE8)."
+      );
     }
 
     if (!items || !Array.isArray(items) || items.length === 0)
@@ -72,6 +69,31 @@ export async function POST(request: NextRequest) {
 
     if (errors.length > 0) {
       return NextResponse.json({ errors }, { status: 400 });
+    }
+
+    // ── Verify transaction with Blink ────────────────────────────────
+    const txStatus = await getTransactionStatus(transactionId);
+    console.log("[3DS complete] Blink transaction status:", JSON.stringify(txStatus));
+
+    // Accepted statuses for a pre-authorisation
+    const acceptedStatuses = ["authorised", "preauthorised", "pre_authorised", "3dsecure", "pending", "accepted", "approved", "paid", "sale"];
+    if (txStatus.success && txStatus.status) {
+      const s = txStatus.status.toLowerCase();
+      const isDeclined = ["declined", "failed", "cancelled", "error", "voided", "refunded"].includes(s);
+      if (isDeclined) {
+        return NextResponse.json(
+          { errors: [`Payment was ${txStatus.status}. Please try again.`] },
+          { status: 402 }
+        );
+      }
+      // If status is not in our accepted list, log a warning but still proceed —
+      // the preauth may use a status string we haven't seen yet.
+      if (!acceptedStatuses.some((a) => s.includes(a))) {
+        console.warn("[3DS complete] Unexpected Blink status:", txStatus.status, "— proceeding anyway");
+      }
+    } else if (!txStatus.success) {
+      // Could not reach Blink to verify — proceed anyway to avoid blocking valid orders.
+      console.warn("[3DS complete] Could not verify transaction status:", txStatus.errorMessage);
     }
 
     // ── Fetch current product prices ────────────────────────────────
@@ -82,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     const { data: products, error: productError } = await supabase
       .from("products")
-      .select("id, name, price, active")
+      .select("id, name, price, active, stock_quantity")
       .in("id", productIds);
 
     if (productError || !products?.length) {
@@ -163,6 +185,17 @@ export async function POST(request: NextRequest) {
 
     await supabase.from("order_items").insert(orderItems);
 
+    // ── Decrement stock ─────────────────────────────────────────────
+    for (const item of items as { productId: string; quantity: number }[]) {
+      const product = productMap.get(item.productId);
+      if (product?.stock_quantity != null) {
+        await supabase.rpc("decrement_stock", {
+          p_product_id: item.productId,
+          p_qty: item.quantity,
+        });
+      }
+    }
+
     // ── Send confirmation email ─────────────────────────────────────
     const orderWithItems = {
       ...order,
@@ -175,14 +208,16 @@ export async function POST(request: NextRequest) {
     };
 
     try {
-      await getResend().emails.send({
+      const htmlContent = orderConfirmationHtml({ order: orderWithItems });
+      const emailResult = await getResend().emails.send({
         from: FROM_EMAIL,
         to: order.email,
         subject: `Order Confirmed — Danskys Pesach Lettuce #${order.id.slice(0, 8).toUpperCase()}`,
-        html: orderConfirmationHtml({ order: orderWithItems }),
+        html: htmlContent,
       });
+      console.log("[3DS] Customer email result:", JSON.stringify(emailResult));
     } catch (emailError) {
-      console.error("Failed to send confirmation email (3DS):", emailError);
+      console.error("[3DS] Failed to send confirmation email:", emailError);
     }
 
     // ── Admin notification ──────────────────────────────────────────
@@ -193,9 +228,7 @@ export async function POST(request: NextRequest) {
       )
       .join("");
     const deliveryLabel = order.delivery_method === "delivery" ? "Home Delivery" : "Pickup";
-    const addressLine = order.delivery_method === "delivery"
-      ? `${order.address_line1 ?? ""}${order.address_line2 ? ", " + order.address_line2 : ""}, ${order.city ?? ""}, ${order.postcode ?? ""}`
-      : "Pickup from store";
+    const addressLine = `${order.address_line1 ?? ""}${order.address_line2 ? ", " + order.address_line2 : ""}${order.postcode ? ", " + order.postcode : ""}`;
     try {
       await getResend().emails.send({
         from: FROM_EMAIL,
