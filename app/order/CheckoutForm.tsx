@@ -169,17 +169,15 @@ export default function CheckoutForm({ onSuccess }: CheckoutFormProps) {
       newErrors.email = "Valid email required";
     if (!form.phone.trim()) newErrors.phone = "Required";
 
-    if (isDelivery) {
-      if (!form.address_line1.trim())
-        newErrors.address_line1 = "Door number / name required";
-      if (!form.address_line2.trim())
-        newErrors.address_line2 = "Street required";
-      if (!form.postcode.trim()) {
-        newErrors.postcode = "Postcode required";
-      } else if (!/^NE8/i.test(form.postcode.trim())) {
-        newErrors.postcode =
-          "Home delivery is only available within the Bensham delivery zone (NE8).";
-      }
+    if (!form.address_line1.trim())
+      newErrors.address_line1 = "Door number / name required";
+    if (!form.address_line2.trim())
+      newErrors.address_line2 = "Street required";
+    if (!form.postcode.trim()) {
+      newErrors.postcode = "Postcode required";
+    } else if (isDelivery && !/^NE8/i.test(form.postcode.trim())) {
+      newErrors.postcode =
+        "Home delivery is only available within the Bensham delivery zone (NE8).";
     }
 
     if (!form.terms_accepted)
@@ -262,7 +260,7 @@ export default function CheckoutForm({ onSuccess }: CheckoutFormProps) {
       }
 
       if (data.requiresRedirect && data.redirectHtml) {
-        sessionStorage.setItem(
+        localStorage.setItem(
           "blink_3ds_pending",
           JSON.stringify({
             first_name: form.first_name,
@@ -363,40 +361,40 @@ export default function CheckoutForm({ onSuccess }: CheckoutFormProps) {
         />
       </div>
 
-      {/* Delivery Address */}
-      {isDelivery && (
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-[#2d6e3e] uppercase tracking-wider mb-4">
-            Delivery Address
-          </h3>
-          <div className="space-y-4">
-            <FormInput
-              label="Door Number / Name"
-              required
-              value={form.address_line1}
-              onChange={(e) => set("address_line1", e.target.value)}
-              error={errors.address_line1}
-              autoComplete="address-line1"
-            />
-            <FormInput
-              label="Street"
-              required
-              value={form.address_line2}
-              onChange={(e) => set("address_line2", e.target.value)}
-              error={errors.address_line2}
-              autoComplete="address-line2"
-            />
-            <FormInput
-              label="Postcode"
-              required
-              value={form.postcode}
-              onChange={(e) => set("postcode", e.target.value.toUpperCase())}
-              error={errors.postcode}
-              autoComplete="postal-code"
-              helper="Bensham delivery zone only"
-            />
-          </div>
+      {/* Address */}
+      <div className="mb-6">
+        <h3 className="text-sm font-medium text-[#2d6e3e] uppercase tracking-wider mb-4">
+          {isDelivery ? "Delivery Address" : "Your Address"}
+        </h3>
+        <div className="space-y-4">
+          <FormInput
+            label="Door Number / Name"
+            required
+            value={form.address_line1}
+            onChange={(e) => set("address_line1", e.target.value)}
+            error={errors.address_line1}
+            autoComplete="address-line1"
+          />
+          <FormInput
+            label="Street"
+            required
+            value={form.address_line2}
+            onChange={(e) => set("address_line2", e.target.value)}
+            error={errors.address_line2}
+            autoComplete="address-line2"
+          />
+          <FormInput
+            label="Postcode"
+            required
+            value={form.postcode}
+            onChange={(e) => set("postcode", e.target.value.toUpperCase())}
+            error={errors.postcode}
+            autoComplete="postal-code"
+            helper={isDelivery ? "Bensham delivery zone only" : undefined}
+          />
+        </div>
 
+        {isDelivery && (
           <div className="mt-6 p-4 bg-[#f2faf3] border border-[#c5e0cc] rounded-xl">
             <p className="text-sm text-[#1c3320]/70 leading-relaxed mb-4">
               If no one is available at the time of delivery, please specify
@@ -417,8 +415,8 @@ export default function CheckoutForm({ onSuccess }: CheckoutFormProps) {
               />
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Order Notes */}
       <div className="mb-6">
@@ -530,33 +528,28 @@ export default function CheckoutForm({ onSuccess }: CheckoutFormProps) {
       </div>
 
       {/* T&C */}
-      <div className="mb-6">
+      <div className={`mb-6 p-3 rounded-xl border transition-colors ${form.terms_accepted ? "border-[#2d6e3e] bg-[#e8f5eb]" : "border-red-300 bg-red-50"}`}>
         <label className="flex items-start gap-2 cursor-pointer">
           <input
             type="checkbox"
             checked={form.terms_accepted}
             onChange={(e) => set("terms_accepted", e.target.checked)}
-            className="mt-0.5 accent-[#2d6e3e]"
+            className="mt-0.5 accent-[#2d6e3e] w-4 h-4 flex-shrink-0"
           />
-          <span className="text-sm text-[#1c3320]/75 leading-relaxed">
+          <span className="text-sm text-[#1c3320] font-medium leading-relaxed">
             I agree to the{" "}
             <a
               href="/terms"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#2d6e3e] hover:underline"
+              className="text-[#2d6e3e] underline hover:text-[#245730]"
             >
               Terms &amp; Conditions
             </a>{" "}
             and understand my card will be pre-authorised until my order is
-            ready. <span className="text-[#c9a84c]">*</span>
+            ready. <span className="text-red-500 font-bold">* Required</span>
           </span>
         </label>
-        {errors.terms_accepted && (
-          <p className="text-red-500 text-xs mt-1 ml-5">
-            {errors.terms_accepted}
-          </p>
-        )}
       </div>
 
       {/* Submit error */}
@@ -593,7 +586,7 @@ export default function CheckoutForm({ onSuccess }: CheckoutFormProps) {
 
       <button
         type="submit"
-        disabled={submitting || blinkLoading || !!blinkError}
+        disabled={submitting || blinkLoading || !!blinkError || !form.terms_accepted}
         className="w-full flex items-center justify-center gap-3 py-4 bg-[#2d6e3e] hover:bg-[#245730] disabled:bg-[#2d6e3e]/50 disabled:cursor-not-allowed text-white font-bold text-base rounded-xl transition-all duration-200 active:scale-[0.99]"
       >
         {submitting ? (

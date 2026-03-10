@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
       .from("orders")
       .select("first_name, last_name, email, phone, created_at")
       .eq("marketing_optin", true)
+      .eq("is_test", false)
       .neq("status", "cancelled")
       .order("created_at", { ascending: false });
 
@@ -109,6 +110,7 @@ export async function GET(request: NextRequest) {
       )
     `
     )
+    .eq("is_test", false)
     .neq("status", "cancelled");
 
   if (type !== "all") {

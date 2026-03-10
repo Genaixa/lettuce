@@ -11,6 +11,7 @@ export default function HomePage() {
   return (
     <CartProvider>
       <div className="min-h-screen bg-white">
+        <div className="fixed top-3 right-4 z-50 text-[#1c3320]/40 text-sm font-medium select-none" dir="rtl">בס״ד</div>
         <Navbar />
         <main>
           <HeroSection />

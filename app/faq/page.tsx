@@ -35,11 +35,11 @@ const faqs = [
   },
   {
     q: "What if I need to cancel my order?",
-    a: "We are not accepting cancellations. Our lettuce is an expensive, perishable item and we cannot resell returned stock. Orders are final.",
+    a: "We are not able to accept cancellations or returns. All orders are final once placed.",
   },
   {
-    q: "Can I order without pre-ordering?",
-    a: "To guarantee your order, a pre-order must be placed. Walk-in stock may be available in store, but this cannot be relied upon.",
+    q: "Do I need to place a pre-order?",
+    a: "To guarantee stock, a pre-order must be placed. Walk-in stock may be available in store, but availability cannot be guaranteed.",
   },
 ];
 

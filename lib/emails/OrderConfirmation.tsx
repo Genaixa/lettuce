@@ -313,16 +313,14 @@ export function OrderConfirmationEmail({ order }: OrderConfirmationProps) {
                     >
                       {isDelivery ? "Delivery Details" : "Pickup Information"}
                     </p>
-                    {isDelivery ? (
-                      <p style={{ color: "#f5f0e8", opacity: 0.8, fontSize: "14px", lineHeight: "1.6", margin: 0 }}>
-                        {order.address_line1}
-                        {order.address_line2 && `, ${order.address_line2}`},{" "}
-                        {order.city}, {order.postcode}
-                      </p>
-                    ) : (
-                      <p style={{ color: "#f5f0e8", opacity: 0.8, fontSize: "14px", lineHeight: "1.6", margin: 0 }}>
-                        Your order will be available for pickup at our store. We
-                        will contact you when it is ready.
+                    <p style={{ color: "#f5f0e8", opacity: 0.8, fontSize: "14px", lineHeight: "1.6", margin: "0 0 8px 0" }}>
+                      {order.address_line1}
+                      {order.address_line2 && `, ${order.address_line2}`}
+                      {order.postcode && `, ${order.postcode}`}
+                    </p>
+                    {!isDelivery && (
+                      <p style={{ color: "#f5f0e8", opacity: 0.6, fontSize: "13px", lineHeight: "1.6", margin: 0 }}>
+                        Your order will be available for pickup at our store. We will contact you when it is ready.
                       </p>
                     )}
                   </td>
@@ -402,6 +400,11 @@ ${isDelivery ? `<tr><td style="color:#f5f0e8;opacity:.6;font-size:13px;">Deliver
 <p style="color:#f5f0e8;opacity:.8;font-size:13px;margin:0;line-height:1.5;">Your card has been pre-authorised for £${order.total.toFixed(2)}. Payment will only be captured when your order is ready.</p>
 </td></tr>
 </table>
+</td></tr>
+<tr><td style="padding:24px 32px;">
+<p style="color:#c9a84c;font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:0 0 12px 0;">${isDelivery ? "Delivery Details" : "Pickup Information"}</p>
+<p style="color:#f5f0e8;opacity:.8;font-size:14px;line-height:1.6;margin:0 0 8px 0;">${order.address_line1}${order.address_line2 ? `, ${order.address_line2}` : ""}${order.postcode ? `, ${order.postcode}` : ""}</p>
+${!isDelivery ? `<p style="color:#f5f0e8;opacity:.6;font-size:13px;line-height:1.6;margin:0;">Your order will be available for pickup at our store. We will contact you when it is ready.</p>` : ""}
 </td></tr>
 <tr><td style="padding:24px 32px;text-align:center;background:#111;border-top:1px solid #333;">
 <p style="color:#f5f0e8;opacity:.4;font-size:12px;margin:0 0 4px 0;">Questions? Email <a href="mailto:orders@danskys.co.uk" style="color:#c9a84c;">orders@danskys.co.uk</a></p>

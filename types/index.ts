@@ -7,9 +7,12 @@ export interface Product {
   price: number;
   image_url: string | null;
   badge: string | null;
+  badge_starburst?: boolean;
+  supervision?: string | null;
   meta: string | null;
   active: boolean;
   sort_order: number;
+  stock_quantity?: number | null;
 }
 
 export interface CartItem {

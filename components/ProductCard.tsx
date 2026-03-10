@@ -31,11 +31,33 @@ export default function ProductCard({ product }: ProductCardProps) {
             <span className="text-6xl">🥬</span>
           </div>
         )}
-        {product.badge && (
+        {product.badge && !product.badge_starburst && (
           <div className="absolute top-3 left-3">
             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#2d6e3e] text-white text-xs font-bold rounded-full">
               <Tag size={10} />
               {product.badge}
+            </span>
+          </div>
+        )}
+        {product.supervision && product.badge_starburst && (
+          <div className="absolute top-3 left-3">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#2d6e3e] text-white text-xs font-bold rounded-full">
+              <Tag size={10} />
+              {product.supervision}
+            </span>
+          </div>
+        )}
+        {product.badge && product.badge_starburst && (
+          <div className="absolute top-1 right-1 w-24 h-24 flex items-center justify-center">
+            <div className="absolute w-[4.5rem] h-[4.5rem] bg-[#dc2626]" />
+            <div className="absolute w-[4.5rem] h-[4.5rem] bg-[#dc2626] rotate-[22.5deg]" />
+            <div className="absolute w-[4.5rem] h-[4.5rem] bg-[#dc2626] rotate-[45deg]" />
+            <div className="absolute w-[4.5rem] h-[4.5rem] bg-[#dc2626] rotate-[67.5deg]" />
+            <span
+              className="relative z-10 text-center text-white text-[11px] font-bold italic leading-tight px-2"
+              style={{ fontFamily: "var(--font-playfair, Georgia, serif)" }}
+            >
+              {product.badge.split(" - ")[1] ?? product.badge}
             </span>
           </div>
         )}
@@ -55,7 +77,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               {product.meta}
             </p>
           )}
-          <p className="text-[#1c3320]/75 text-sm leading-relaxed whitespace-pre-line">
+          <p className="text-[#1c3320] text-sm font-medium leading-relaxed whitespace-pre-line">
             {product.description}
           </p>
         </div>
@@ -68,18 +90,27 @@ export default function ProductCard({ product }: ProductCardProps) {
             £{product.price.toFixed(2)}
           </span>
 
-          <button
-            onClick={() => addItem(product)}
-            className={clsx(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
-              cartItem
-                ? "bg-[#2d6e3e] text-white hover:bg-[#245730]"
-                : "bg-[#c9a84c] text-[#1c3320] hover:bg-[#a8863a] active:scale-95"
-            )}
-          >
-            <ShoppingCart size={15} />
-            {cartItem ? `In cart (${cartItem.quantity})` : "Add to Order"}
-          </button>
+          {product.stock_quantity != null && product.stock_quantity <= 0 ? (
+            <button
+              disabled
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-gray-200 text-gray-400 cursor-not-allowed"
+            >
+              Sold Out
+            </button>
+          ) : (
+            <button
+              onClick={() => addItem(product)}
+              className={clsx(
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
+                cartItem
+                  ? "bg-[#2d6e3e] text-white hover:bg-[#245730]"
+                  : "bg-[#c9a84c] text-[#1c3320] hover:bg-[#a8863a] active:scale-95"
+              )}
+            >
+              <ShoppingCart size={15} />
+              {cartItem ? `In cart (${cartItem.quantity})` : "Add to Order"}
+            </button>
+          )}
         </div>
       </div>
     </div>

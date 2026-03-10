@@ -92,7 +92,15 @@ export default function Footer() {
             &copy; {currentYear} Danskys Pesach Lettuce. All rights reserved.
           </p>
           <p className="text-[#f5f0e8]/40 text-xs">
-            Kosher-checked &bull; Gateshead
+            Designed by{" "}
+            <a
+              href="https://genaixa.co.uk/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#c9a84c] transition-colors"
+            >
+              Genaixa Ltd
+            </a>
           </p>
         </div>
       </div>

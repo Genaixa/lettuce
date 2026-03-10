@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("orders")
     .select(`*, order_items(*, products(*))`)
+    .eq("is_test", false)
     .order("created_at", { ascending: false });
 
   if (deliveryMethod === "delivery" || deliveryMethod === "pickup") {

@@ -60,6 +60,7 @@ export default function AdminClient() {
   const [password, setPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -109,7 +110,7 @@ export default function AdminClient() {
     setAuthLoading(false);
   }
 
-  async function handleExport(type: "delivery" | "pickup") {
+  async function handleExport(type: "delivery" | "pickup" | "all" | "marketing") {
     const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch(`/api/admin/export?type=${type}`, {
       headers: { Authorization: `Bearer ${session?.access_token ?? ""}` },
@@ -119,9 +120,39 @@ export default function AdminClient() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `danskys-${type}s-${new Date().toISOString().slice(0, 10)}.csv`;
+    const filename = type === "all"
+      ? `danskys-all-orders-${new Date().toISOString().slice(0, 10)}.csv`
+      : type === "marketing"
+      ? `danskys-marketing-emails-${new Date().toISOString().slice(0, 10)}.csv`
+      : `danskys-${type}s-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function handleDelete(orderId: string) {
+    if (!confirm("Permanently delete this order? This cannot be undone.")) return;
+    setDeletingOrderId(orderId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({ orderId }),
+      });
+      if (res.ok) {
+        setSelectedOrder(null);
+        await loadOrders();
+      } else {
+        const data = await res.json();
+        alert(data.error ?? "Failed to delete order");
+      }
+    } finally {
+      setDeletingOrderId(null);
+    }
   }
 
   const stats = {
@@ -129,7 +160,7 @@ export default function AdminClient() {
     deliveries: orders.filter((o) => o.delivery_method === "delivery" && o.status !== "cancelled").length,
     pickups: orders.filter((o) => o.delivery_method === "pickup" && o.status !== "cancelled").length,
     revenue: orders
-      .filter((o) => o.payment_status === "captured")
+      .filter((o) => o.status !== "cancelled" && o.status !== "refunded")
       .reduce((sum, o) => sum + Number(o.total), 0),
     productQuantities: orders
       .filter((o) => o.status !== "cancelled")
@@ -251,6 +282,20 @@ export default function AdminClient() {
               Pickups CSV
             </button>
             <button
+              onClick={() => handleExport("all")}
+              className="flex items-center gap-2 px-3 py-2 bg-white border border-[#c5e0cc] hover:border-[#2d6e3e]/50 text-[#1c3320]/70 hover:text-[#1c3320] text-sm rounded-lg transition-colors"
+            >
+              <Download size={14} />
+              All Orders CSV
+            </button>
+            <button
+              onClick={() => handleExport("marketing")}
+              className="flex items-center gap-2 px-3 py-2 bg-white border border-[#c5e0cc] hover:border-[#2d6e3e]/50 text-[#1c3320]/70 hover:text-[#1c3320] text-sm rounded-lg transition-colors"
+            >
+              <Download size={14} />
+              Marketing Emails CSV
+            </button>
+            <button
               onClick={loadOrders}
               className="p-2 bg-white border border-[#c5e0cc] hover:border-[#2d6e3e]/50 text-[#1c3320]/70 hover:text-[#1c3320] rounded-lg transition-colors"
               title="Refresh"
@@ -272,7 +317,7 @@ export default function AdminClient() {
             { label: "Total Orders", value: stats.total, icon: <Package size={18} />, sub: "excl. cancelled" },
             { label: "Deliveries", value: stats.deliveries, icon: <Truck size={18} />, sub: "home delivery" },
             { label: "Pickups", value: stats.pickups, icon: <Store size={18} />, sub: "in-store" },
-            { label: "Revenue", value: `£${stats.revenue.toFixed(2)}`, icon: <DollarSign size={18} />, sub: "captured payments" },
+            { label: "Revenue", value: `£${stats.revenue.toFixed(2)}`, icon: <DollarSign size={18} />, sub: "total sales" },
           ].map((card) => (
             <div key={card.label} className="bg-white border border-[#c5e0cc] rounded-xl p-4">
               <div className="flex items-center gap-2 text-[#2d6e3e] mb-2">
@@ -300,12 +345,22 @@ export default function AdminClient() {
               </span>
             </div>
             <div className="flex flex-wrap gap-3">
-              {Object.entries(stats.productQuantities).map(([name, qty]) => (
-                <div key={name} className="px-3 py-1.5 bg-[#f2faf3] border border-[#c5e0cc] rounded-lg text-sm">
-                  <span className="text-[#1c3320]/70">{name}:</span>{" "}
-                  <span className="text-[#2d6e3e] font-semibold">{qty}</span>
-                </div>
-              ))}
+              {Object.entries(stats.productQuantities).map(([name, qty]) => {
+                const originalStock =
+                  name.toLowerCase().includes("alei katif") ? 270 :
+                  name.toLowerCase().includes("bodek") ? 480 :
+                  name.toLowerCase().includes("cheffman") ? 500 :
+                  null;
+                return (
+                  <div key={name} className="px-3 py-1.5 bg-[#f2faf3] border border-[#c5e0cc] rounded-lg text-sm">
+                    <span className="text-[#1c3320]/70">{name}:</span>{" "}
+                    <span className="text-[#2d6e3e] font-semibold">{qty}</span>
+                    {originalStock != null && (
+                      <span className="text-[#1c3320]/40"> / {originalStock}</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -430,9 +485,18 @@ export default function AdminClient() {
                         })}
                       </Dialog.Description>
                     </div>
-                    <Dialog.Close className="p-2 text-[#1c3320]/40 hover:text-[#1c3320] transition-colors">
-                      ✕
-                    </Dialog.Close>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDelete(selectedOrder.id)}
+                        disabled={deletingOrderId === selectedOrder.id}
+                        className="px-3 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {deletingOrderId === selectedOrder.id ? "Deleting…" : "Delete"}
+                      </button>
+                      <Dialog.Close className="p-2 text-[#1c3320]/40 hover:text-[#1c3320] transition-colors">
+                        ✕
+                      </Dialog.Close>
+                    </div>
                   </div>
 
                   <div className="space-y-4 text-sm">
@@ -466,7 +530,12 @@ export default function AdminClient() {
                           )}
                         </>
                       ) : (
-                        <Row label="Method" value="In-store pickup" />
+                        <>
+                          <Row label="Method" value="In-store pickup" />
+                          {selectedOrder.address_line1 && (
+                            <Row label="Address" value={[selectedOrder.address_line1, selectedOrder.address_line2, selectedOrder.postcode].filter(Boolean).join(", ")} />
+                          )}
+                        </>
                       )}
                     </Section>
 

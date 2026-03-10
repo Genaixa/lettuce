@@ -56,18 +56,14 @@ export async function POST(request: NextRequest) {
     if (!delivery_method || !["delivery", "pickup"].includes(delivery_method))
       errors.push("Delivery method is required");
 
-    if (delivery_method === "delivery") {
-      if (!address_line1?.trim())
-        errors.push("Door number / name is required for delivery");
-      if (!address_line2?.trim())
-        errors.push("Street is required for delivery");
-      if (!postcode?.trim()) {
-        errors.push("Postcode is required for delivery");
-      } else if (!validatePostcode(postcode)) {
-        errors.push(
-          "Home delivery is only available within the Bensham delivery zone (NE8)."
-        );
-      }
+    if (!address_line1?.trim()) errors.push("Door number / name is required");
+    if (!address_line2?.trim()) errors.push("Street is required");
+    if (!postcode?.trim()) {
+      errors.push("Postcode is required");
+    } else if (delivery_method === "delivery" && !validatePostcode(postcode)) {
+      errors.push(
+        "Home delivery is only available within the Bensham delivery zone (NE8)."
+      );
     }
 
     if (!blink_payment_token)
@@ -90,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     const { data: products, error: productError } = await supabase
       .from("products")
-      .select("id, name, price, active")
+      .select("id, name, price, active, stock_quantity")
       .in("id", productIds);
 
     if (productError || !products?.length) {
@@ -109,6 +105,12 @@ export async function POST(request: NextRequest) {
           { errors: [`Product ${item.productId} is not available`] },
           { status: 400 }
         );
+      }
+      if (product.stock_quantity != null && product.stock_quantity < item.quantity) {
+        const msg = product.stock_quantity <= 0
+          ? `${product.name} is sold out`
+          : `Only ${product.stock_quantity} of ${product.name} remaining`;
+        return NextResponse.json({ errors: [msg] }, { status: 400 });
       }
     }
 
@@ -215,6 +217,17 @@ export async function POST(request: NextRequest) {
 
     await supabase.from("order_items").insert(orderItems);
 
+    // ── Decrement stock ─────────────────────────────────────────────
+    for (const item of items as { productId: string; quantity: number }[]) {
+      const product = productMap.get(item.productId);
+      if (product?.stock_quantity != null) {
+        await supabase.rpc("decrement_stock", {
+          p_product_id: item.productId,
+          p_qty: item.quantity,
+        });
+      }
+    }
+
     // ── Send confirmation email ─────────────────────────────────────
     const orderWithItems = {
       ...order,
@@ -227,14 +240,16 @@ export async function POST(request: NextRequest) {
     };
 
     try {
-      await getResend().emails.send({
+      const htmlContent = orderConfirmationHtml({ order: orderWithItems });
+      const emailResult = await getResend().emails.send({
         from: FROM_EMAIL,
         to: order.email,
         subject: `Order Confirmed — Danskys Pesach Lettuce #${order.id.slice(0, 8).toUpperCase()}`,
-        html: orderConfirmationHtml({ order: orderWithItems }),
+        html: htmlContent,
       });
+      console.log("[orders] Customer email result:", JSON.stringify(emailResult));
     } catch (emailError) {
-      console.error("Failed to send confirmation email:", emailError);
+      console.error("[orders] Failed to send confirmation email:", emailError);
     }
 
     // ── Admin notification ──────────────────────────────────────────
@@ -245,9 +260,7 @@ export async function POST(request: NextRequest) {
       )
       .join("");
     const deliveryLabel = order.delivery_method === "delivery" ? "Home Delivery" : "Pickup";
-    const addressLine = order.delivery_method === "delivery"
-      ? `${order.address_line1 ?? ""}${order.address_line2 ? ", " + order.address_line2 : ""}, ${order.city ?? ""}, ${order.postcode ?? ""}`
-      : "Pickup from store";
+    const addressLine = `${order.address_line1 ?? ""}${order.address_line2 ? ", " + order.address_line2 : ""}${order.postcode ? ", " + order.postcode : ""}`;
     try {
       await getResend().emails.send({
         from: FROM_EMAIL,

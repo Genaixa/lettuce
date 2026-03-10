@@ -21,7 +21,7 @@ export default function CartSection({ locked = false, onChangeDelivery }: CartSe
   } = useCart();
 
   return (
-    <div className="sticky top-20">
+    <div className={locked ? "sticky top-20" : undefined}>
       <h2
         className="text-xl font-semibold text-[#1c3320] mb-6"
         style={{ fontFamily: "var(--font-playfair, Georgia, serif)" }}
@@ -86,20 +86,9 @@ export default function CartSection({ locked = false, onChangeDelivery }: CartSe
         </p>
 
         {locked ? (
-          <div className="flex items-center justify-between p-3 bg-[#e8f5eb] border border-[#2d6e3e] rounded-xl">
-            <div className="flex items-center gap-2 text-[#2d6e3e] font-medium text-sm">
-              {deliveryMethod === "pickup" ? <Store size={16} /> : <Truck size={16} />}
-              <span>{deliveryMethod === "pickup" ? "Pickup — +£2.50" : "Home Delivery — +£5.00"}</span>
-            </div>
-            {onChangeDelivery && (
-              <button
-                type="button"
-                onClick={onChangeDelivery}
-                className="text-xs text-[#2d6e3e]/70 hover:text-[#2d6e3e] underline"
-              >
-                Change
-              </button>
-            )}
+          <div className="flex items-center gap-2 p-3 bg-[#e8f5eb] border border-[#2d6e3e] rounded-xl text-[#2d6e3e] font-medium text-sm">
+            {deliveryMethod === "pickup" ? <Store size={16} /> : <Truck size={16} />}
+            <span>{deliveryMethod === "pickup" ? "Pickup — +£2.50" : "Home Delivery — +£5.00"}</span>
           </div>
         ) : (
           <>
@@ -163,10 +152,12 @@ export default function CartSection({ locked = false, onChangeDelivery }: CartSe
         </div>
       </div>
 
-      <p className="mt-3 text-[#1c3320]/40 text-xs leading-relaxed">
-        Your card will be pre-authorised, not charged, when you place your
-        order. Payment is captured when your order is ready.
-      </p>
+      {locked && (
+        <p className="mt-3 text-[#1c3320]/60 text-xs leading-relaxed">
+          Your card will be pre-authorised, not charged, when you place your
+          order. Payment is captured when your order is ready.
+        </p>
+      )}
     </div>
   );
 }
