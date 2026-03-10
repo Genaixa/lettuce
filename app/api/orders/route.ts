@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { processCard } from "@/lib/blink";
+import { processCard, voidPayment } from "@/lib/blink";
 import { Resend } from "resend";
 import { orderConfirmationHtml } from "@/lib/emails/OrderConfirmation";
 import type { DeliveryMethod } from "@/types";
@@ -199,6 +199,11 @@ export async function POST(request: NextRequest) {
 
     if (orderError || !order) {
       console.error("Order insert error:", orderError);
+      if (preauthResult.transactionId) {
+        await voidPayment(preauthResult.transactionId).catch((e) =>
+          console.error("Failed to void preauth after order insert failure:", e)
+        );
+      }
       return NextResponse.json(
         { errors: ["Failed to create order. Please contact us."] },
         { status: 500 }
